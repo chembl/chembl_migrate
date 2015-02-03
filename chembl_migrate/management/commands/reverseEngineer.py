@@ -20,7 +20,7 @@ NAME_SUBSTITUTIONS = {'molregno' : 'molecule', 'tid' : 'target', 'level5': 'atc_
                       'parent_molregno': 'parent_molecule', 'active_molregno': 'active_molecule', 'mec':'mechanism',
                       'related_tid' : 'related_target'}
 
-KNOWN_SINGLE_VALUED_COLUMNS = ['db_version', 'updated_by']
+KNOWN_SINGLE_VALUED_COLUMNS = ['db_version', 'updated_by', 'molecular_mechanism', 'disease_efficacy', 'direct_interaction']
 KNOWN_SINGLE_VALUED_TABLES = ['version']
 
 table2model = lambda table_name: table_name.title().replace('_', '').replace(' ', '').replace('-', '')
