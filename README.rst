@@ -1,3 +1,6 @@
+.. image:: https://badge.waffle.io/chembl/chembl_migrate.png?label=ready&title=Ready 
+ :target: https://waffle.io/chembl/chembl_migrate
+ :alt: 'Stories in Ready'
 chembl_migration_model
 ======
 
