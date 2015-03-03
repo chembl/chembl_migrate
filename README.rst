@@ -1,6 +1,3 @@
-.. image:: https://badge.waffle.io/chembl/chembl_migrate.png?label=ready&title=Ready 
- :target: https://waffle.io/chembl/chembl_migrate
- :alt: 'Stories in Ready'
 chembl_migration_model
 ======
 
@@ -11,6 +8,10 @@ chembl_migration_model
 .. image:: https://pypip.in/d/chembl_migrate/badge.png
     :target: https://crate.io/packages/chembl_migrate/
     :alt: Number of PyPI downloads
+
+.. image:: https://badge.waffle.io/chembl/chembl_migrate.png?label=ready&title=Ready 
+ :target: https://waffle.io/chembl/chembl_migrate
+ :alt: 'Stories in Ready'
 
 This is chembl_migrate package developed at Chembl group, EMBL-EBI, Cambridge, UK.
 
