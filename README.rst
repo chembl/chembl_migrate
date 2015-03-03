@@ -1,6 +1,14 @@
 chembl_migration_model
 ======
 
+.. image:: https://pypip.in/v/chembl_migrate/badge.png
+    :target: https://crate.io/packages/chembl_migrate/
+    :alt: Latest PyPI version
+
+.. image:: https://pypip.in/d/chembl_migrate/badge.png
+    :target: https://crate.io/packages/chembl_migrate/
+    :alt: Number of PyPI downloads
+
 This is chembl_migrate package developed at Chembl group, EMBL-EBI, Cambridge, UK.
 
 This package provides custom Django management command 'migrate'.
