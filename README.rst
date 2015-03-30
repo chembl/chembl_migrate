@@ -1,4 +1,4 @@
-chembl_migration_model
+chembl_migrate
 ======
 
 .. image:: https://pypip.in/version/chembl_migrate/badge.svg
