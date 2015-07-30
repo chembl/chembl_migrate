@@ -1,23 +1,24 @@
 chembl_migrate
 ======
 
-.. image:: https://pypip.in/version/chembl_migrate/badge.svg
+
+.. image:: https://img.shields.io/pypi/v/chembl_migrate.svg
     :target: https://pypi.python.org/pypi/chembl_migrate/
     :alt: Latest Version
 
-.. image:: https://pypip.in/download/chembl_migrate/badge.svg
+.. image:: https://img.shields.io/pypi/dm/chembl_migrate.svg
     :target: https://pypi.python.org/pypi/chembl_migrate/
     :alt: Downloads
 
-.. image:: https://pypip.in/py_versions/chembl_migrate/badge.svg
+.. image:: https://img.shields.io/pypi/pyversions/chembl_migrate.svg
     :target: https://pypi.python.org/pypi/chembl_migrate/
     :alt: Supported Python versions
 
-.. image:: https://pypip.in/status/chembl_migrate/badge.svg
+.. image:: https://img.shields.io/pypi/status/chembl_migrate.svg
     :target: https://pypi.python.org/pypi/chembl_migrate/
     :alt: Development Status
 
-.. image:: https://pypip.in/license/chembl_migrate/badge.svg
+.. image:: https://img.shields.io/pypi/l/chembl_migrate.svg
     :target: https://pypi.python.org/pypi/chembl_migrate/
     :alt: License
 
