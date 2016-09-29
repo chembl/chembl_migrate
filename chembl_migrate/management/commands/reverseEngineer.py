@@ -9,6 +9,7 @@ from django.core.management.base import CommandError
 from django.conf import settings
 import tempfile
 import os
+import sys
 
 try:
     DEFAULT_LAYOUT_PATH = settings.DEFAULT_LAYOUT_PATH
@@ -595,14 +596,20 @@ class Command(InspectCommand):
         for table_name in tables:
             relations = self.get_relations(table_name)
             rels = map(lambda x: relations[x][1], relations)
-            dependencies.append([table_name,rels])
+            dependencies.append([table_name,[rel for rel in rels if table_name not in rel]])
 
         order = []
         while len(dependencies):
             for dep in dependencies:
                 if not len(dep[1]):
                     order.append(dep[0])
+            old_dep_len = len(dependencies)
             dependencies = filter(lambda x: x[0] not in order, dependencies)
+            new_dep_len = len(dependencies)
+            if len(dependencies) and old_dep_len == new_dep_len:
+                print "ERROR: infinite loop while sorting dependencies:"
+                print dependencies
+                sys.exit()
             for dep in dependencies:
                 dep[1] = filter(lambda x : x not in order, dep[1])
 
