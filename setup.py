@@ -12,7 +12,7 @@ except ImportError:
 
 setup(
     name='chembl-migrate',
-    version='0.8.3',
+    version='0.8.4',
     author='Michal Nowotka',
     author_email='mnowotka@ebi.ac.uk',
     description='Django custom management tool intended to perform data exports and migration of CheMBL database.',
