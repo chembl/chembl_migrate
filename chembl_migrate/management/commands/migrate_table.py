@@ -93,6 +93,7 @@ class Command(BaseCommand):
             letter = model.__name__[0]
             color = "\033[1;%dm" % (30 + random.randint(0,7))
 
+        last_pk = None
         for i in range(start, count, size):
             if verbosity > 1:
                 sys.stdout.write("\033[0m%s%s\033[0m" % (color, letter))
@@ -103,10 +104,12 @@ class Command(BaseCommand):
             with conn.constraint_checks_disabled():
 
                 if i < 0:
-                    original_data =  model.objects.using(source_db).order_by(pk)[:size]
+                    original_data = model.objects.using(source_db).order_by(pk)[:size]
                 else:
-                    last_pk = model.objects.using(source_db).order_by(pk).only(pk).values_list(pk)[i][0]
-                    original_data =  model.objects.using(source_db).order_by(pk).filter(pk__gt=last_pk)[:size]
+                    if not last_pk:
+                        last_pk = model.objects.using(source_db).order_by(pk).only(pk).values_list(pk)[i][0]
+                    original_data = model.objects.using(source_db).order_by(pk).filter(pk__gt=last_pk)[:size]
+                last_pk = original_data[size-1].pk
 
                 model.objects.using(target_db).bulk_create(original_data)
 

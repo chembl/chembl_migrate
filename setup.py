@@ -11,8 +11,8 @@ except ImportError:
     from setuptools import setup
 
 setup(
-    name='chembl_migrate',
-    version='0.6.1',
+    name='chembl-migrate',
+    version='0.8.3',
     author='Michal Nowotka',
     author_email='mnowotka@ebi.ac.uk',
     description='Django custom management tool intended to perform data exports and migration of CheMBL database.',
