@@ -108,9 +108,7 @@ class Command(BaseCommand):
                 else:
                     if not last_pk:
                         last_pk = model.objects.using(source_db).order_by(pk).only(pk).values_list(pk)[i][0]
-                    #original_data = model.objects.using(source_db).order_by(pk).filter(pk__gt=last_pk)[:size]
                     original_data = model.objects.using(source_db).filter(pk__gt=last_pk).order_by(pk)[:size]
-                #last_pk = original_data[size-1].pk
                 actual_size = len(original_data)
                 last_pk = original_data[actual_size-1].pk
 
