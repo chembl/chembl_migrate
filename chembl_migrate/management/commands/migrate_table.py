@@ -1,6 +1,7 @@
 __author__ = 'mnowotka'
 
 from django.core.management.base import BaseCommand
+from django.apps import apps
 from optparse import make_option
 from django.db.utils import DatabaseError
 from django.conf import settings
@@ -14,26 +15,25 @@ try:
 except AttributeError:
     DEFAULT_CHUNK_SIZE = 1000
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 class Command(BaseCommand):
-    option_list = BaseCommand.option_list + (
-        make_option('--chunkSize', default=DEFAULT_CHUNK_SIZE, dest='chunk_size',
-            help='How many rows are migrated in single transaction.'),
-        make_option('--appLabel', default=EXPORT, dest='app_label',
-            help='Application whose model will be migrated.'),
-        make_option('--targetDatabase', dest='targetDatabase',
-            default=None, help='Target database'),
-        make_option('--sourceDatabase', dest='sourceDatabase',
-            default=None, help='Source database'),
-        make_option('--modelName', dest='modelName',
-            default=None, help='name of the model to migrate'),
-        )
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
+    def add_arguments(self, parser):
+        parser.add_argument('--chunkSize', default=DEFAULT_CHUNK_SIZE, dest='chunk_size',
+                            help='How many rows are migrated in single transaction.')
+        parser.add_argument('--appLabel', default=EXPORT, dest='app_label',
+                            help='Application whose model will be migrated.')
+        parser.add_argument('--targetDatabase', dest='targetDatabase', default=None, help='Target database')
+        parser.add_argument('--sourceDatabase', dest='sourceDatabase', default=None, help='Source database')
+        parser.add_argument('--modelName', dest='modelName', default=None, help='name of the model to migrate')
+
+# -----------------------------------------------------------------------------------------------------------------------
 
     def handle(self, *args, **options):
-        import django.db.models
         import django.db
         django.db.reset_queries()
 
@@ -44,7 +44,7 @@ class Command(BaseCommand):
         django.db.connections[targetDatabase].close()
         django.db.connections[sourceDatabase].close()
         model_name = options.get('modelName')
-        model = django.db.models.get_model(appLabel, model_name)
+        model = apps.get_model(appLabel, model_name)
         print "migrating " + model_name + '...'
         migrated = False
         size = options.get('chunk_size')
@@ -68,11 +68,10 @@ class Command(BaseCommand):
                 break
         print model_name + ' migration finished (migrated = %s).' % str(migrated)
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def migrate(self, model, target_db, source_db='default', size=1000, verbosity=1):
-        import django.core.serializers
-        import django.db.transaction
+        from django.db import transaction
         import django.db.utils
         import random
         import sys
@@ -80,6 +79,7 @@ class Command(BaseCommand):
         count = model.objects.using(source_db).count()
         targetCount = model.objects.using(target_db).count()
         conn = django.db.connections[target_db]
+        transaction.set_autocommit(False)
 
         if count == targetCount:
             print model.__name__ + " is already exported."
@@ -98,9 +98,6 @@ class Command(BaseCommand):
             if verbosity > 1:
                 sys.stdout.write("\033[0m%s%s\033[0m" % (color, letter))
                 sys.stdout.flush()
-            django.db.transaction.commit_unless_managed(using=target_db)
-            django.db.transaction.enter_transaction_management(using=target_db)
-            django.db.transaction.managed(True, using=target_db)
             with conn.constraint_checks_disabled():
 
                 if i < 0:
@@ -114,6 +111,5 @@ class Command(BaseCommand):
                 model.objects.using(target_db).bulk_create(original_data)
 
             django.db.transaction.commit(using=target_db)
-            django.db.transaction.leave_transaction_management(using=target_db)
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------

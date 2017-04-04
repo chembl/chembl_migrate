@@ -1,8 +1,9 @@
 __author__ = 'mnowotka'
 
 from django.core.management.base import BaseCommand
-from django.core.management.commands.syncdb import *
-from django.utils.datastructures import SortedDict
+from django.core.management.color import no_style
+from django.apps import apps
+from collections import OrderedDict
 from optparse import make_option
 from django import db
 from django.db import DEFAULT_DB_ALIAS
@@ -20,32 +21,33 @@ try:
 except AttributeError:
     EXPORT = 'chembl_migration_model'
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 def migrate_table((name, src, dest, format, verbosity)):
     import django.core.management
-    django.core.management.call_command('migrate_table', targetDatabase=dest, sourceDatabase=src, modelName=name, format=format, verbosity=verbosity)
+    django.core.management.call_command('migrate_table', targetDatabase=dest, sourceDatabase=src, modelName=name,
+                                        format=format, verbosity=verbosity)
     return name
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 class Command(BaseCommand):
-    option_list = BaseCommand.option_list + (
-        make_option('--format', default='json', dest='format',
-            help='Specifies the output serialization format for migration.'),
-        make_option('--targetDatabase', dest='targetDatabase',
-            default=DEFAULT_DB_ALIAS, help='Target database'),
-        make_option('--sourceDatabase', dest='sourceDatabase',
-            default=None, help='Source database'),
-        make_option('--onlySync', dest='onlySync',
-            default=None, help="Don't migrate, just create schema"),
-        make_option('--printDependencies', dest='printDeps',
-            default=None, help="Don't migrate, just show dependencies"),
-        )
-    help = ("Migrate data from one database to another.")
+
+    help = "Migrate data from one database to another."
     args = '[appname appname.ModelName ...]'
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
+    def add_arguments(self, parser):
+        parser.add_argument('--format', default='json', dest='format', help='Specifies the output serialization format for migration.')
+        parser.add_argument('--targetDatabase', dest='targetDatabase', default=DEFAULT_DB_ALIAS, help='Target database')
+        parser.add_argument('--sourceDatabase', dest='sourceDatabase', default=None, help='Source database')
+        parser.add_argument('--onlySync', dest='onlySync', default=None, help="Don't migrate, just create schema")
+        parser.add_argument('--printDependencies', dest='printDeps', default=None, help="Don't migrate, just show dependencies")
+
+# ----------------------------------------------------------------------------------------------------------------------
 
     def __init__(self):
         self.dag = None
@@ -54,23 +56,21 @@ class Command(BaseCommand):
         self.sourceDatabase = None
         super(Command, self).__init__()
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def checkForSync(self, app_list, target_db, verbosity):
-        from django.db.models import get_model, get_models
+        from django.apps import apps
         for app, model_list in app_list:
             if model_list is None:
-                model_list = get_models(app)
+                model_list = apps.get_models(app)
 
             for model in model_list:
                 self.checkTable(model, target_db, verbosity)
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def checkTable(self, model, target_db, verbosity):
-        transaction.commit_unless_managed(using=target_db)
-        transaction.enter_transaction_management(using=target_db)
-        transaction.managed(True, using=target_db)
+        transaction.set_autocommit(False)
         try:
             model.objects.using(target_db).count()
         except DatabaseError as e:
@@ -81,14 +81,13 @@ class Command(BaseCommand):
             else:
                 raise e
         transaction.commit(using=target_db)
-        transaction.leave_transaction_management(using=target_db)
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def escape_comments(self, comment):
             return re.sub('%', '%%', re.sub(r"'", "''", comment))
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_previous_column_definition(self, f, style, connection):
         if connection.vendor != 'mysql':
@@ -112,7 +111,7 @@ class Command(BaseCommand):
             field_output.append(style.SQL_KEYWORD('UNIQUE'))
         return ' '.join(field_output)
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def sql_for_column_comments(self, model, style, connection):
         """
@@ -131,33 +130,29 @@ class Command(BaseCommand):
                     continue
                 if connection.vendor in ('oracle', 'postgresql'):
                     output.extend(
-                        (style.SQL_KEYWORD("COMMENT ON COLUMN") + " " +
-                        style.SQL_TABLE(qn(table)) + "." + style.SQL_FIELD(qn(f.column)) + " " +
-                        style.SQL_KEYWORD("IS")  + " " +
-                        "'%s';" % self.escape_comments(f.help_text),))
+                        (style.SQL_KEYWORD("COMMENT ON COLUMN") + " " + style.SQL_TABLE(qn(table)) + "."
+                         + style.SQL_FIELD(qn(f.column)) + " " + style.SQL_KEYWORD("IS")
+                         + " " + "'%s';" % self.escape_comments(f.help_text),))
                 elif connection.vendor == 'mysql':
                     previous_column_definition = self.get_previous_column_definition(f, style, connection)
                     output.extend(
-                        (style.SQL_KEYWORD("ALTER TABLE") + " " +
-                        style.SQL_TABLE(qn(table)) + " " +
-                        style.SQL_KEYWORD("MODIFY COLUMN")  + " " +
-                        style.SQL_FIELD(qn(f.column)) + " " +
-                        previous_column_definition + " " +
-                        style.SQL_KEYWORD("COMMENT") + " " +
-                        "'%s';" % self.escape_comments(f.help_text),))
+                        (style.SQL_KEYWORD("ALTER TABLE") + " " + style.SQL_TABLE(qn(table)) + " "
+                         + style.SQL_KEYWORD("MODIFY COLUMN") + " " + style.SQL_FIELD(qn(f.column)) + " "
+                         + previous_column_definition + " " + style.SQL_KEYWORD("COMMENT") + " "
+                         + "'%s';" % self.escape_comments(f.help_text),))
                 else:
                     continue
             return output
         except:
             print "failed generating column comments for model %s" % model
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def sql_for_pending_references(self, model, style, pending_references, connection):
         """
         Returns any ALTER TABLE statements to add constraints after the fact.
         """
-        from django.db.backends.util import truncate_name
+        from django.db.backends.utils import truncate_name
 
         opts = model._meta
         qn = connection.ops.quote_name
@@ -182,7 +177,7 @@ class Command(BaseCommand):
             del pending_references[model]
         return final_output
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def sql_indexes_for_model(self, model, style, connection):
         """
@@ -199,7 +194,7 @@ class Command(BaseCommand):
         except:
             print "failed generating indexes for model %s" % model
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def syncApp(self, appName, database, verbosity):
 
@@ -220,11 +215,11 @@ class Command(BaseCommand):
         # Build the manifest of apps and models that are to be synchronized
         all_models = [
         (app.__name__.split('.')[-2],
-         [m for m in models.get_models(app, include_auto_created=True, only_installed=False)])
-        for app in [models.get_app(appName)]
+         [m for m in apps.get_models(app, include_auto_created=True, only_installed=False)])
+        for app in [apps.get_app(appName)]
         ]
 
-        manifest = SortedDict(
+        manifest = OrderedDict(
             (app_name, model_list)
                 for app_name, model_list in all_models
         )
@@ -284,7 +279,7 @@ class Command(BaseCommand):
         if verbosity >= 3:
             print "indexes created"
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def callback(self, name=None):
         if not self.dag:
@@ -306,12 +301,12 @@ class Command(BaseCommand):
             return
 
         chunk = []
-        for (m,d) in self.dag:
+        for (m, d) in self.dag:
             if not d:
                 chunk.append(m.__name__)
 
         for model in chunk:
-            for (m,d) in self.dag:
+            for (m, d) in self.dag:
                 if m.__name__ == model:
                     self.dag.remove((m,d))
 
@@ -320,14 +315,15 @@ class Command(BaseCommand):
 
         pool = mp.Pool(len(chunk))
         for model in chunk:
-            pool.apply_async(migrate_table, args=((model, self.sourceDatabase, self.targetDatabase, self.format, self.verbosity),), callback = self.callback)
+            pool.apply_async(migrate_table,
+                             args=((model, self.sourceDatabase, self.targetDatabase, self.format, self.verbosity),),
+                             callback=self.callback)
         pool.close()
         pool.join()
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def handle(self, *args, **options):
-        from django.db.models import get_app
         import copy
         if settings.DEBUG:
             print "Django is in debug mode, which causes memory leak. Set settings.DEBUG to False and run again."
@@ -336,7 +332,7 @@ class Command(BaseCommand):
         db.reset_queries()
         deps = options.get('printDeps', False)
         sync = options.get('onlySync', False)
-        app_list = SortedDict((app, None) for app in [get_app(EXPORT)])
+        app_list = OrderedDict((app, None) for app in [apps.get_app(EXPORT)])
         if not deps:
             self.format = options.get('format')
             self.targetDatabase = options.get('targetDatabase')
@@ -354,7 +350,7 @@ class Command(BaseCommand):
             return
         self.callback()
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def showDependencies(self):
         dotFile = 'dependencies.dot'
@@ -381,16 +377,17 @@ mincross = 2.0 ;
         check_call([program,'-T%s' % outFormat, dotFile,'-o',outFile])
         os.system('display -resize 25%% %s' % outFile)
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 def get_dependencies(app_list):
-    from django.db.models import get_model, get_models
+    from django.apps import apps
     # Process the list of models, and get the list of dependencies
     model_dependencies = []
     models = set()
     for app, model_list in app_list:
         if model_list is None:
-            model_list = get_models(app)
+            model_list = apps.get_models(app)
 
         for model in model_list:
             models.add(model)
@@ -410,12 +407,13 @@ def get_dependencies(app_list):
     model_dependencies.reverse()
     return model_dependencies
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 def check_dependencies(dep):
 
     while dep:
-        #print "model_dependencies = " + str(model_dependencies) + "\n\n"
+        # print "model_dependencies = " + str(model_dependencies) + "\n\n"
         models = []
         changed = False
         for (m, d) in dep:
@@ -423,7 +421,7 @@ def check_dependencies(dep):
                 models.append(m)
                 changed = True
         if not changed:
-            #print "ERROR model_dependencies = " + str(model_dependencies) + "\n\n"
+            # print "ERROR model_dependencies = " + str(model_dependencies) + "\n\n"
             raise NameError
 
         for model in models:
@@ -431,10 +429,10 @@ def check_dependencies(dep):
                 if model == m:
                     dep.remove((m,d))
         for model in models:
-            #print "removing " + str(model) + " from dependencies" + "\n\n"
+            # print "removing " + str(model) + " from dependencies" + "\n\n"
             for (m,d) in dep:
                 while model in d:
                     d.remove(model)
-                    #print "dependencies after removal: " + str(model_dependencies) + "\n\n"
+                    # print "dependencies after removal: " + str(model_dependencies) + "\n\n"
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------

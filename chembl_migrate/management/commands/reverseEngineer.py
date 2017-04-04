@@ -27,36 +27,40 @@ KNOWN_SINGLE_VALUED_TABLES = ['version']
 table2model = lambda table_name: table_name.title().replace('_', '').replace(' ', '').replace('-', '')
 
 PROPERTIES = {'molecule_dictionary':
-                  {'compoundproperties':'compoundProperty',
-                   'compoundstructures' : 'compoundStructure',
+                  {'compoundproperties': 'compoundProperty',
+                   'compoundstructures': 'compoundStructure',
                    'compoundimages': 'compoundImage',
                    'compoundmols': 'compoundMol',
-                   'moleculehierarchy':'moleculeHierarchy'}
+                   'moleculehierarchy': 'moleculeHierarchy'}
 }
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
+
 
 class Command(InspectCommand):
     help = "Introspects the ChEMBL database and outputs a Django model module."
-
-    option_list = InspectCommand.option_list + (
-        make_option('--layout', action='store', dest='layout',
-            default=DEFAULT_LAYOUT_PATH, help='Path to .INI file with logical database table layout.'),
-        )
 
     connection = None
     cursor = None
     tables_relations = {}
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
-    def handle_noargs(self, **options):
+    def add_arguments(self, parser):
+        parser.add_argument('--layout', action='store', dest='layout',
+                            default=DEFAULT_LAYOUT_PATH, help='Path to .INI file with logical database table layout.')
+
+        super(Command, self).add_arguments(parser)
+
+# ----------------------------------------------------------------------------------------------------------------------
+
+    def handle(self, **options):
         try:
             self.handle_inspection(options)
         except NotImplementedError:
             raise CommandError("Database inspection isn't supported for the currently selected database backend.")
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def write_file_header(self, fp, filename):
         fp.write("# This is an auto-generated Django model module.\n")
@@ -79,14 +83,14 @@ class Command(InspectCommand):
         fp.write('from django.utils import six\n')
         fp.write('\n')
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def write_file_footer(self, fp):
         fp.write(LINE + '\n')
         fp.write('\n')
         fp.close()
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def write_class_declaration(self, fp, table_name):
         fp.write(LINE + '\n')
@@ -97,7 +101,7 @@ class Command(InspectCommand):
             fp.write('    objects = CompoundMolsManager()\n')
         fp.write('\n')
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_relations(self, table_name):
         if not table_name in self.tables_relations:
@@ -111,7 +115,7 @@ class Command(InspectCommand):
 
         return relations
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_indexes(self, table_name):
         try:
@@ -120,7 +124,7 @@ class Command(InspectCommand):
             indexes = {}
         return indexes
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_arity(self, table_name):
         try:
@@ -129,7 +133,7 @@ class Command(InspectCommand):
             arity = {}
         return arity
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_constraints(self, table_name):
         try:
@@ -138,7 +142,7 @@ class Command(InspectCommand):
             constrains = []
         return constrains
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_comments(self, table_name):
         try:
@@ -147,7 +151,7 @@ class Command(InspectCommand):
             comments = {}
         return comments
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_defaults(self, table_name):
         try:
@@ -156,16 +160,16 @@ class Command(InspectCommand):
             defaults = {}
         return defaults
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_unique_together(self, table_name):
         try:
             unique_together = self.connection.introspection.get_unique_together(self.cursor, table_name)
         except NotImplementedError:
             unique_together = {}
-        return  unique_together
+        return unique_together
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_triggers(self, table_name):
         try:
@@ -174,7 +178,7 @@ class Command(InspectCommand):
             triggers = []
         return triggers
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_nonunique_index_columns(self, table_name):
         try:
@@ -184,20 +188,20 @@ class Command(InspectCommand):
 
         return nonunique_index_columns
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def validate_empty_and_stale_columns(self, arity, table_name):
-        empty_columns = filter(lambda x:arity[x][0] == 0, arity)
+        empty_columns = filter(lambda x: arity[x][0] == 0, arity)
         if empty_columns:
             print "\033[0m\033[1;%dmWarning [%s]: empty columns detected in %s table: %s\033[0m" % (30, 1, table_name, ', '.join(empty_columns))
 
         if table_name not in KNOWN_SINGLE_VALUED_TABLES:
-            stale_columns = filter(lambda x:arity[x][0] == 1 and x not in KNOWN_SINGLE_VALUED_COLUMNS, arity)
+            stale_columns = filter(lambda x: arity[x][0] == 1 and x not in KNOWN_SINGLE_VALUED_COLUMNS, arity)
             if stale_columns:
                 print "\033[0m\033[1;%dmWarning [%s]: columns with single distinct value " \
                       "detected in %s table: %s\033[0m" % (31, 2, table_name,  ', '.join(stale_columns))
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_choices(self, table_name, constrains, arity, relations, comments, defaults):
         try:
@@ -236,7 +240,7 @@ class Command(InspectCommand):
 
         return choices, null_flags, flags, tri_state_flags
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def add_indexes_to_params(self, extra_params, column_name, table_meta_desc):
         # Add primary_key and unique, if necessary.
@@ -256,7 +260,7 @@ class Command(InspectCommand):
             if not column_name in indexes or not indexes[column_name]['primary_key']:
                 extra_params['db_index'] = True
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def modify_field_name(self, row, table_meta_desc, table_name):
         comment_notes = [] # Holds Field notes, to be displayed in a Python comment.
@@ -290,7 +294,7 @@ class Command(InspectCommand):
 
         return comment_notes, column_name, extra_params, att_name, desc
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def find_field_type(self, i, table_name, row, column_name, att_name, extra_params, comment_notes, table_meta_desc):
         relations = table_meta_desc['relations']
@@ -362,7 +366,7 @@ class Command(InspectCommand):
 
         return field_type, att_name
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def enhance_extra_params(self, extra_params, column_name, field_type, att_name, row,
                                                                         comment_notes, table_meta_desc, table_name):
@@ -408,7 +412,7 @@ class Command(InspectCommand):
 
         return att_name
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_field_description(self, table_name, row, i, table_meta_desc):
         comment_notes, column_name, extra_params, att_name, desc = self.modify_field_name(row, table_meta_desc, table_name)
@@ -488,7 +492,7 @@ class Command(InspectCommand):
 
         return field_desc
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def write_choices(self, fp, choices, table_name):
         for choice in sorted(choices.keys()):
@@ -497,7 +501,7 @@ class Command(InspectCommand):
                 fp.write('        %s,\n' % str(bla))
             fp.write('        )\n\n')
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def write_properties(self, fp, table_name):
         if table_name in PROPERTIES:
@@ -508,7 +512,7 @@ class Command(InspectCommand):
             return self.%s
         return None\n\n''' % (property[1], property[0], property[0]))
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_table_meta_description(self, table_name):
         meta_desc = {}
@@ -535,7 +539,7 @@ class Command(InspectCommand):
 
         return meta_desc
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def write_model(self, fp, table_name):
         self.write_class_declaration(fp, table_name)
@@ -553,7 +557,7 @@ class Command(InspectCommand):
         for meta_line in self.get_meta(table_name, table_meta_desc['unique_together']):
             fp.write(meta_line + '\n')
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def write_module(self, path, name, sect, order):
         filename = table2model(name) + '.py'
@@ -569,7 +573,7 @@ class Command(InspectCommand):
 
         self.write_file_footer(fp)
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_configuration(self, filename):
         config = ConfigParser.ConfigParser()
@@ -583,12 +587,12 @@ class Command(InspectCommand):
             printed_tables.extend(options)
             sect[section] = options
 
-        tables = [table for table in self.connection.introspection.get_table_list(self.cursor) if
-                  table in printed_tables]
+        table_list = [table.name for table in self.connection.introspection.get_table_list(self.cursor)]
+        tables = [table for table in table_list if table in printed_tables]
 
         return sect, tables
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def sort_dependencies(self, tables):
 
@@ -615,7 +619,7 @@ class Command(InspectCommand):
 
         return order
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def handle_inspection(self, options):
         self.connection = connections[options.get('database')]
@@ -623,6 +627,7 @@ class Command(InspectCommand):
 
         layout_path = options.get('layout')
         sect, tables = self.get_configuration(layout_path)
+        assert tables
         sections = sect.keys()
         order = self.sort_dependencies(tables)
 
@@ -633,7 +638,7 @@ class Command(InspectCommand):
         for name in sections:
             self.write_module(tmp, name, sect, order)
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_field_type(self, connection, table_name, row):
         """
@@ -666,7 +671,7 @@ class Command(InspectCommand):
 
         return field_type, field_params, field_notes
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
     def get_meta(self, table_name, uniqueTogether = None):
         """
@@ -686,4 +691,4 @@ class Command(InspectCommand):
                 '        %s' % meta,
                 '']
 
-#-----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
